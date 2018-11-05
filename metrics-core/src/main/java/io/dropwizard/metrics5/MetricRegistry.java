@@ -458,18 +458,13 @@ public class MetricRegistry implements MetricSet {
 
     @SuppressWarnings("unchecked")
     private <T extends Metric> T getOrAdd(MetricName name, MetricBuilder<T> builder) {
-        final Metric metric = metrics.get(name);
+        final Metric metric = metrics.computeIfAbsent(name, k-> {
+            Metric newMetric = builder.newMetric();
+            onMetricAdded(name, newMetric);
+            return newMetric;
+        });
         if (builder.isInstance(metric)) {
             return (T) metric;
-        } else if (metric == null) {
-            try {
-                return register(name, builder.newMetric());
-            } catch (IllegalArgumentException e) {
-                final Metric added = metrics.get(name);
-                if (builder.isInstance(added)) {
-                    return (T) added;
-                }
-            }
         }
         throw new IllegalArgumentException(name + " is already used for a different type of metric");
     }
